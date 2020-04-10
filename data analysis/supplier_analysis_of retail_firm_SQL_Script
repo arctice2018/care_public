@@ -1,0 +1,133 @@
+/*
+1st Question:
+供应商与批发商的客户在同一个城市的情况,客户额数量最多的前5名城市？
+*/
+WITH t1 AS (
+  SELECT
+    Country AS s_country,
+    City AS s_city,
+    CompanyName AS s_company_name
+  FROM
+    Suppliers s
+),
+t2 AS (
+  SELECT
+    City AS c_city
+  FROM
+    Customers c
+)
+SELECT
+  t1.s_city AS same_city,
+  t1.s_company_name AS suplr_name,
+  COUNT(t1.s_city) AS num_of_customers
+FROM
+  t1
+LEFT JOIN
+  t2
+ON
+  t1.s_city = c_city
+GROUP BY 1,2
+ORDER BY 3 DESC
+LIMIT 5;
+
+/*
+2nd Question:
+各个供应商提供的产品种类分别是多少？
+*/
+WITH t1 AS (
+  SELECT
+    suplrs.CompanyName AS suplrs_name,
+    suplrs.Country AS suplr_in_country,
+    catgory.CategoryName AS catgory_name
+  FROM
+    Suppliers suplrs
+  JOIN
+    Products prdts
+  ON
+    suplrs.SupplierID = prdts.SupplierID
+  JOIN
+    Categories catgory
+  ON
+    catgory.CategoryID = prdts.CategoryID
+)
+SELECT
+  suplrs_name,
+  COUNT(catgory_name) AS num_catgory_per_suplr
+FROM
+  t1
+GROUP BY 1
+ORDER BY 2 DESC
+LIMIT 5;
+
+/*
+3th Question:
+销售额最大的客户的产品都有哪些？是哪个供应商提供的货物？
+*/
+WITH t1 AS(
+  SELECT
+    custmrs.CompanyName AS customer_name,
+    prdts.ProductName AS prdt_name,
+    suplrs.CompanyName AS suplr_name,
+    CAST(odrdtl.UnitPrice AS float)*odrdtl.Quantity*(1-odrdtl.Discount) AS total_sale
+  FROM
+    Customers custmrs
+  JOIN
+    Orders odrs
+  ON
+    custmrs.CustomerID = odrs.CustomerID
+  JOIN
+    OrderDetails odrdtl
+  ON
+    odrdtl.OrderID = odrs.OrderId
+  JOIN
+    Products prdts
+  ON
+    prdts.ProductID = odrdtl.ProductID
+  JOIN
+    Suppliers suplrs
+  ON
+    suplrs.SupplierID = prdts.SupplierID
+)
+SELECT
+  suplr_name,
+  SUM(total_sale) AS sum_total_sale
+FROM
+  t1
+GROUP BY 1
+ORDER BY 2 DESC
+LIMIT 5;
+
+/*
+4th Question:
+单价（UnitPrice）价格高于平均价格的产品都是由哪些供应商供应的？
+*/
+WITH t1 AS(
+  SELECT
+    prdts.UnitPrice AS prdt_unit_price,
+    suplrs.CompanyName AS suplr_name
+  FROM
+    Products prdts
+  JOIN
+    Suppliers suplrs
+  ON
+    suplrs.SupplierID = prdts.SupplierID
+),
+t2 AS(
+  SELECT
+    AVG(prdt_unit_price) AS avg_prdt_unit_price
+  FROM
+    t1
+)
+SELECT
+  suplrs.CompanyName AS suplrs_name,
+  prdts.UnitPrice AS prdt_unit_price
+FROM
+  Products prdts
+JOIN
+  Suppliers suplrs
+ON
+  suplrs.SupplierID = prdts.SupplierID
+WHERE
+  prdt_unit_price > (SELECT * FROM t2)
+ORDER BY 2 DESC
+LIMIT 5;
